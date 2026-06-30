@@ -2,16 +2,15 @@
 synth_extractor.py
 
 small script to pull structured synthesis params out of nanomaterial papers using
-an LLM. mostly wanted to try out the "ask llm for json, check it's actually what
-I asked for" pattern instead of just trusting whatever comes back.
+an LLM. 
 
 uses groq's api to call llama 3.3 70b (free, fast, no cc needed for the key).
 swapping to openai/anthropic later would just mean changing the client + model
 name, the rest of the logic doesn't care.
 
 setup:
-    pip install groq
-    export GROQ_API_KEY="gsk_..."   (free key, no cc needed - console.groq.com)
+    pip install groq python-dotenv
+    echo 'GROQ_API_KEY=gsk_...' > .env   (free key - console.groq.com)
     python synth_extractor.py
 """
 
@@ -19,11 +18,12 @@ import json
 import os
 import sys
 
+from dotenv import load_dotenv
 from groq import Groq
 
-# fields I expect back from the model for every sample. keeping this as a plain
-# list instead of some schema class - it's just here so I can sanity check the
-# json actually has what I asked for before I trust it.
+load_dotenv()
+
+
 REQUIRED_FIELDS = [
     "material", "method", "reagents", "temperature_C", "time_hours",
     "solvent", "atmosphere", "yield_or_purity", "special_conditions",
@@ -70,8 +70,7 @@ DEMO_TEXTS = [
     },
 ]
 
-# spent a bit of time getting this to reliably output clean json - llama likes to
-# add markdown fences or little comments if you don't explicitly tell it not to.
+
 SYSTEM_PROMPT = """You are a chemistry information-extraction assistant specialised in
 nanomaterial synthesis.  Extract ALL synthesis parameters from the user-supplied text
 and return ONLY a valid JSON object - no prose, no markdown fences - with exactly
@@ -164,7 +163,7 @@ def main():
         sys.exit(1)
 
     client = Groq(api_key=api_key)
-    model = "meta-llama/llama-3.3-70b-versatile"  # free tier on groq
+    model = "llama-3.3-70b-versatile"  # free tier on groq
 
     print(f"\nRunning synthesis parameter extraction  (model: {model})\n")
 
