@@ -1,67 +1,79 @@
+# syn_extract
 
-# synth-extractor
+Pulls structured synthesis parameters out of nanomaterial chemistry papers using an LLM. Sends a text excerpt to Groq's API (Llama 3.3 70B), asks for a JSON response, and validates the schema before accepting it.
 
-small script I put together to pull structured synthesis params out of nanomaterial
-papers using an LLM. mostly wanted to play around with structured output / schema
-validation instead of just trusting whatever json a model spits out.
+## What it extracts
 
-## the problem
+| Field | Description |
+|---|---|
+| `material` | Synthesised material (e.g. Au25 nanocluster) |
+| `method` | Synthesis method (e.g. reduction, heating) |
+| `reagents` | List of reagents with name, concentration, volume/mass, and role |
+| `temperature_C` | Reaction temperature in °C |
+| `time_hours` | Reaction time converted to hours |
+| `solvent` | Solvent system used |
+| `atmosphere` | Reaction atmosphere (e.g. N2, air) |
+| `yield_or_purity` | Yield or purity if reported |
+| `special_conditions` | Any other notable conditions (pH, stirring speed, etc.) |
 
-synthesis details (reagents, temp, time, solvent...) are basically always just
-buried in a paragraph of prose in papers. fine for a human reading one paper,
-annoying if you actually want a dataset out of a hundred of them. so the idea
-here is just: feed it the paragraph, get back clean json, validate it, done.
+## Setup
 
-## how it works
-
-- uses groq's api to call llama 3.3 70b (free, fast, no cc needed for the key)
-- prompt tells the model exactly what fields to return
-- does a quick check that the response actually has those fields before I trust
-  it - didn't want to pull in a whole schema library for this, a plain dict +
-  a list of required keys is enough to catch the model skipping something
-- dumps everything to `extraction_results.json` at the end
-
-## running it
+**1. Install dependencies**
 
 ```bash
-pip install groq
-export GROQ_API_KEY="gsk_..."     # free, get one at console.groq.com
-python synth_extractor.py
+pip install groq python-dotenv
 ```
 
-it'll run on 3 demo paragraphs I pulled from open-access gold nanocluster /
-nanoparticle papers (Au25(SG)18 synthesis, the classic Turkevich citrate method,
-and a BSA-encapsulated AuNC prep) and print a summary for each, plus save the
-full structured output to json.
+**2. Get a free Groq API key**
 
-sample output:
+Sign up at [console.groq.com](https://console.groq.com) — no credit card required.
+
+**3. Create a `.env` file**
+
+```bash
+echo 'GROQ_API_KEY=gsk_...' > .env
+```
+
+The `.env` file is listed in `.gitignore` and will not be committed.
+
+## Usage
+
+```bash
+python3 python
+```
+
+The script runs against three built-in demo excerpts from open-access gold nanocluster / nanoparticle papers and prints a formatted summary for each, then writes all results to `extraction_results.json`.
+
+**Example output:**
 
 ```
 =================================================================
-  Sample 1  |  Jin et al. (open access) - Au25(SG)18 synthesis
+  Sample 2  |  Turkevich / Frens method (classic, public domain)
 =================================================================
-  Material       : Au25(SG)18 nanoclusters
-  Method         : one-pot reduction
-  Temperature    : 0 → 25 °C
-  Time           : 24 h
-  Solvent        : methanol/water (1:1 v/v)
-  Atmosphere     : N2
+  Material       : gold nanoparticles
+  Method         : heating
+  Temperature    : 100 °C
+  Time           : 0.33 h
+  Solvent        : —
+  Atmosphere     : —
+  Yield/Purity   : —
+  Special notes  : vigorous stirring
 
   Reagents:
-    • HAuCl4·3H2O  0.1 mmol  [gold precursor]
-    • Glutathione   0.3 mmol  [ligand]
-    • NaBH4         0.2 M, 0.5 mL  [reducing agent]
+    • HAuCl4  1 mM  100 mL  [precursor]
+    • sodium citrate  38.8 mM  10 mL  [reducing agent]
 ```
 
-## things I might add later
+## Swapping the model or provider
 
-- swap in real paper abstracts via a literature search api instead of hardcoded text
-- batch mode for running over a whole folder/csv of papers
-- try other models (groq has a few open ones) and compare extraction accuracy
-- maybe a confidence/uncertainty field if the model isn't sure about something
+The extraction logic in `extract_parameters()` is provider-agnostic. To switch to OpenAI or Anthropic, replace the `Groq` client and model name in `main()` — nothing else needs to change.
 
-## stack
+## Files
 
-just `groq` for the api call. no schema library, no extra deps - a plain dict
-and a required-fields check do the job here, didn't feel worth adding pydantic
-for something this small.
+```
+.
+├── python                  # main script (synth_extractor.py)
+├── .env                    # your API key (not committed)
+├── .gitignore
+└── extraction_results.json # output, generated on run
+```
